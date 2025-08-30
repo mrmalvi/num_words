@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.description   = "NumWords gem converts integers and decimals to words. Supports US, EU, UK, FR, and Indian number systems with proper handling of decimals."
   spec.homepage      = "https://github.com/mrmalvi/num_words"
 
-  spec.required_ruby_version = ">= 3.2.0"
+  spec.required_ruby_version = ">= 2.7.0"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
   spec.metadata["homepage_uri"] = spec.homepage
