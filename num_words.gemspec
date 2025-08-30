@@ -5,6 +5,7 @@ require_relative "lib/num_words/version"
 Gem::Specification.new do |spec|
   spec.name = "num_words"
   spec.version = NumWords::VERSION
+  spec.license = "MIT"
   spec.authors = ["mrmalvi"]
   spec.email = ["malviyak00@gmail.com"]
 

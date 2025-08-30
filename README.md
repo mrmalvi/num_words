@@ -26,7 +26,6 @@ After releasing your gem to [RubyGems.org](https://rubygems.org), install it wit
 
 ```bash
 # Using Bundler
-bundle add gem 'num_words'
+bundle add num_words
 
-# Or install manually
-gem install num_words
+bundle add num_words
