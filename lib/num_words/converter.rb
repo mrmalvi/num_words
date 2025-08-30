@@ -20,13 +20,16 @@ module NumWords
     90=>"नब्बे",91=>"इक्यानवे",92=>"बयानवे",93=>"तिरेनवे",94=>"चौरानवे",95=>"पचानवे",96=>"छियानवे",97=>"सत्तानवे",98=>"अट्ठानवे",99=>"निन्यानवे"
   }.freeze
 
+  # --- Units ---
   INDIAN_UNITS_HI = ['', 'हज़ार', 'लाख', 'करोड़', 'अरब', 'खरब'].freeze
+  INDIAN_UNITS_EN = ['', 'thousand', 'lakh', 'crore', 'arab', 'kharab'].freeze
+
+  # --- English exponents ---
   AM_EXPONENTS = {
     3 => 'thousand', 6 => 'million', 9 => 'billion', 12 => 'trillion',
     15 => 'quadrillion', 18 => 'quintillion', 21 => 'sexillion', 24 => 'septillion',
     27 => 'octillion', 30 => 'nonillion', 33 => 'decillion', 36 => 'undecillion'
   }.freeze
-  INDIAN_UNITS_EN = ['', 'thousand', 'lakh', 'crore', 'arab', 'kharab'].freeze
 
   COUNTRY_EXPONENTS = {
     us: AM_EXPONENTS,
@@ -35,30 +38,26 @@ module NumWords
 
   class << self
     # Convert number to words
+    # Default language: :en
     def to_words(number, country: :us, language: :en, include_and: true)
-      if [:in].include?(country) && language == :hi
-        return to_words_indian(number)
-      end
-
       val = number.to_i.abs
-      return 'zero' if val.zero?
+      return language == :hi ? HINDI_NUMBERS_1_TO_99[0] : 'zero' if val.zero?
+
+      if country == :in
+        return language == :hi ? to_words_indian(number) : to_words_indian(number, language: :en)
+      end
 
       exp_hash = COUNTRY_EXPONENTS[country] || AM_EXPONENTS
       ones_array = language == :hi ? HINDI_NUMBERS_1_TO_99 : ONES_EN
       tens_array = language == :hi ? HINDI_NUMBERS_1_TO_99 : TENS_EN
-      units = language == :hi ? INDIAN_UNITS_HI : INDIAN_UNITS_EN
-
-      if country == :in
-        to_words_indian(number, language: language)
-      else
-        to_words_generic(val, exp_hash, include_and, ones_array, tens_array)
-      end
+      to_words_generic(val, exp_hash, include_and, ones_array, tens_array)
     end
 
-    # Indian system (Hindi & English)
+    # Indian system (supports English & Hindi)
     def to_words_indian(num, language: :hi)
       num = num.to_i
-      return HINDI_NUMBERS_1_TO_99[num] if num <= 99
+      return HINDI_NUMBERS_1_TO_99[num] if language == :hi && num <= 99
+      return ONES_EN[num] if language == :en && num <= 19
 
       words = []
       unit_index = 0
@@ -66,8 +65,9 @@ module NumWords
       loop do
         break if num.zero?
         num, remainder = unit_index.zero? ? num.divmod(1000) : num.divmod(100)
-        part = convert_hindi_sub_thousand(remainder)
-        words.unshift("#{part} #{INDIAN_UNITS_HI[unit_index]}".strip) if remainder.positive?
+        part = language == :hi ? convert_hindi_sub_thousand(remainder) : convert_english_sub_thousand(remainder)
+        unit_name = language == :hi ? INDIAN_UNITS_HI[unit_index] : INDIAN_UNITS_EN[unit_index]
+        words.unshift("#{part} #{unit_name}".strip) if remainder.positive?
         unit_index += 1
       end
 
@@ -78,7 +78,6 @@ module NumWords
 
     def convert_hindi_sub_thousand(num)
       return HINDI_NUMBERS_1_TO_99[num] if num <= 99
-
       words = []
       if num >= 100
         words << "#{HINDI_NUMBERS_1_TO_99[num / 100]} सौ"
@@ -88,7 +87,19 @@ module NumWords
       words.join(' ').strip
     end
 
-    # Generic system (English or other)
+    def convert_english_sub_thousand(num)
+      return ONES_EN[num] if num < 20
+      words = []
+      if num >= 100
+        words << "#{ONES_EN[num / 100]} hundred"
+        num %= 100
+      end
+      words << TENS_EN[num / 10] if num >= 20
+      num %= 10 if num >= 20
+      words << ONES_EN[num] if num.positive?
+      words.join(' ').strip
+    end
+
     def to_words_generic(val, exp_hash, include_and, ones_array, tens_array)
       chunks = []
       while val.positive?
@@ -99,25 +110,11 @@ module NumWords
       result = []
       chunks.each_with_index do |chunk, index|
         next if chunk.zero?
-        words = hundreds_to_words(chunk, include_and && index.zero?, ones_array, tens_array)
+        words = convert_english_sub_thousand(chunk)
+        words = "and #{words}" if include_and && index.zero? && chunk >= 100
         result.unshift("#{words} #{exp_hash[index * 3]}".strip)
       end
       result.join(' ').strip
-    end
-
-    def hundreds_to_words(val, include_and, ones_array, tens_array)
-      return '' if val.zero?
-
-      words = []
-      if val >= 100
-        words << "#{ones_array[val / 100]} #{ones_array == HINDI_NUMBERS_1_TO_99 ? 'सौ' : 'hundred'}"
-        val %= 100
-        words << 'and' if val.positive? && include_and && ones_array != HINDI_NUMBERS_1_TO_99
-      end
-
-      words << tens_array[val] if val > 0 && val <= 99 && ones_array == HINDI_NUMBERS_1_TO_99
-      words << ones_array[val] if val > 0 && val < 20 && ones_array != HINDI_NUMBERS_1_TO_99
-      words.join(' ').strip
     end
   end
 end

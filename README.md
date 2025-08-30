@@ -9,9 +9,6 @@
 - Convert integers and decimals to words.
 - Supports multiple country numbering systems:
   - **US / American** – `thousand, million, billion`
-  - **European** – `thousand, million, milliard, billion`
-  - **UK** – `thousand, million, billion`
-  - **France** – `mille, million, milliard`
   - **India** – `thousand, lakh, crore`
 - Supports multiple languages:
   - **English** (`:en`)

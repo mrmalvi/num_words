@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email = ["malviyak00@gmail.com"]
 
   spec.summary       = "Convert numbers to words for multiple countries including Indian system"
-  spec.description   = "NumWords gem converts integers and decimals to words. Supports US, EU, UK, FR, and Indian number systems with proper handling of decimals."
+  spec.description   = "NumWords gem converts integers and decimals to words. Supports US and Indian number systems with proper handling of decimals."
   spec.homepage      = "https://github.com/mrmalvi/num_words"
 
   spec.required_ruby_version = ">= 2.7.0"
