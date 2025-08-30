@@ -43,7 +43,7 @@ After releasing your gem to [RubyGems.org](https://rubygems.org), install it wit
 
 ```bash
 # Using Bundler
-bundle add num_words
+bundle add gem "num_words"
 
 # Or using gem install
 gem install num_words
