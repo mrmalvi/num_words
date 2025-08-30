@@ -2,70 +2,69 @@
 # frozen_string_literal: true
 
 module NumWords
-  ONES = %w[zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen].freeze
-  TENS = %w[zero ten twenty thirty forty fifty sixty seventy eighty ninety].freeze
+  # --- English words ---
+  ONES_EN = %w[zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen].freeze
+  TENS_EN = %w[zero ten twenty thirty forty fifty sixty seventy eighty ninety].freeze
 
+  # --- Hindi words ---
+  ONES_HI = %w[शून्य एक दो तीन चार पाँच छह सात आठ नौ दस ग्यारह बारह तेरह चौदह पंद्रह सोलह सत्रह अठारह उन्नीस].freeze
+  TENS_HI = %w[शून्य दस बीस तीस चालीस पचास साठ सत्तर अस्सी नब्बे].freeze
+  INDIAN_UNITS_HI = ['', 'हज़ार', 'लाख', 'करोड़', 'अरब', 'खरब'].freeze
+
+  # --- English exponents ---
   AM_EXPONENTS = {
     3 => 'thousand', 6 => 'million', 9 => 'billion', 12 => 'trillion',
     15 => 'quadrillion', 18 => 'quintillion', 21 => 'sexillion', 24 => 'septillion',
-    27 => 'octillion', 30 => 'nonillion', 33 => 'decillion', 36 => 'undecillion',
-    39 => 'duodecillion', 42 => 'tredecillion', 45 => 'quattuordecillion', 48 => 'quindecillion',
-    51 => 'sexdecillion', 54 => 'septendecillion', 57 => 'octodecillion', 60 => 'novemdecillion',
-    63 => 'vigintillion', 66 => 'unvigintillion', 69 => 'duovigintillion'
+    27 => 'octillion', 30 => 'nonillion', 33 => 'decillion', 36 => 'undecillion'
   }.freeze
 
-  EU_EXPONENTS = {
-    3 => 'thousand', 6 => 'million', 9 => 'milliard', 12 => 'billion',
-    15 => 'billiard', 18 => 'trillion', 21 => 'trilliard', 24 => 'quadrillion',
-    27 => 'quadrilliard', 30 => 'quintillion', 33 => 'quintilliard', 36 => 'sextillion',
-    39 => 'sextilliard', 42 => 'septillion', 45 => 'septilliard', 48 => 'octillion',
-    51 => 'octilliard', 54 => 'noventillion', 57 => 'noventilliard', 60 => 'decillion',
-    63 => 'decilliard', 66 => 'undecillion', 69 => 'undecilliard'
-  }.freeze
-
-  UK_EXPONENTS = {
-    3 => 'thousand', 6 => 'million', 12 => 'billion', 15 => 'billiard',
-    18 => 'trillion', 21 => 'trilliard', 24 => 'quadrillion'
-  }.freeze
-
-  FR_EXPONENTS = {
-    3 => 'mille', 6 => 'million', 9 => 'milliard', 12 => 'billion',
-    15 => 'billiard', 18 => 'trillion', 21 => 'trilliard'
-  }.freeze
-
-  INDIAN_UNITS = ['', 'thousand', 'lakh', 'crore'].freeze
+  INDIAN_UNITS_EN = ['', 'thousand', 'lakh', 'crore', 'arab', 'kharab'].freeze
 
   COUNTRY_EXPONENTS = {
     us: AM_EXPONENTS,
-    eu: EU_EXPONENTS,
-    uk: UK_EXPONENTS,
-    fr: FR_EXPONENTS,
-    in: INDIAN_UNITS
+    in: INDIAN_UNITS_EN
   }.freeze
 
   class << self
-    def to_words(number, country: :us, include_and: true)
-      return to_words_indian(number) if country == :in
+    # Main method: convert number to words
+    # language: :en or :hi
+    def to_words(number, country: :us, language: :en, include_and: true)
+      if [:in].include?(country) && language == :hi
+        return to_words_indian(number, language: language)
+      end
 
       val = number.to_i.abs
       return 'zero' if val.zero?
 
       exp_hash = COUNTRY_EXPONENTS[country] || AM_EXPONENTS
-      to_words_generic(val, exp_hash, include_and)
+      ones_array = language == :hi ? ONES_HI : ONES_EN
+      tens_array = language == :hi ? TENS_HI : TENS_EN
+      units = language == :hi ? INDIAN_UNITS_HI : INDIAN_UNITS_EN
+
+      if country == :in
+        to_words_indian(number, language: language)
+      else
+        to_words_generic(val, exp_hash, include_and, ones_array, tens_array)
+      end
     end
 
-    def to_words_indian(num)
+    # Indian system (supports English & Hindi)
+    def to_words_indian(num, language: :en)
       integer_part, decimal_part = num.to_s.split('.')
-      integer_words = indian_units_to_words(integer_part.to_i)
+      ones_array = language == :hi ? ONES_HI : ONES_EN
+      tens_array = language == :hi ? TENS_HI : TENS_EN
+      units = language == :hi ? INDIAN_UNITS_HI : INDIAN_UNITS_EN
+
+      integer_words = indian_units_to_words(integer_part.to_i, ones_array, tens_array, units)
       return integer_words if decimal_part.nil? || decimal_part.to_i.zero?
 
-      decimal_words = decimal_part.chars.map { |d| sub_thousand_to_words(d.to_i) }.join(' ')
+      decimal_words = decimal_part.chars.map { |d| sub_thousand_to_words(d.to_i, ones_array, tens_array) }.join(' ')
       "#{integer_words} and #{decimal_words}"
     end
 
     private
 
-    def to_words_generic(val, exp_hash, include_and)
+    def to_words_generic(val, exp_hash, include_and, ones_array, tens_array)
       chunks = []
       while val.positive?
         chunks << val % 1000
@@ -75,55 +74,62 @@ module NumWords
       result = []
       chunks.each_with_index do |chunk, index|
         next if chunk.zero?
-        words = hundreds_to_words(chunk, include_and && index.zero?)
+        words = hundreds_to_words(chunk, include_and && index.zero?, ones_array, tens_array)
         result.unshift("#{words} #{exp_hash[index * 3]}".strip)
       end
       result.join(' ').strip
     end
 
-    def hundreds_to_words(val, include_and = false)
+    def hundreds_to_words(val, include_and, ones_array, tens_array)
       return '' if val.zero?
 
       words = []
       if val >= 100
-        words << "#{ONES[val / 100]} hundred"
+        words << "#{ones_array[val / 100]} #{ones_array == ONES_HI ? 'सौ' : 'hundred'}"
         val %= 100
-        words << 'and' if val.positive? && include_and
+        words << 'and' if val.positive? && include_and && ones_array != ONES_HI
       end
 
-      words << TENS[val / 10] if val >= 20
+      words << tens_array[val / 10] if val >= 20
       val %= 10 if val >= 20
-      words << ONES[val] if val.positive?
+      words << ones_array[val] if val.positive?
       words.join(' ').strip
     end
 
-    def indian_units_to_words(num)
+    def indian_units_to_words(num, ones_array, tens_array, units)
       num = num.to_i
-      return 'zero' if num.zero?
+      return ones_array[0] if num.zero?
+
       words = []
       unit_index = 0
 
       loop do
         break if num.zero?
-
         num, remainder = unit_index.zero? ? num.divmod(1000) : num.divmod(100)
-        words.unshift("#{sub_thousand_to_words(remainder)} #{INDIAN_UNITS[unit_index]}".strip) if remainder.positive?
+        words.unshift("#{sub_thousand_to_words(remainder, ones_array, tens_array)} #{units[unit_index]}".strip) if remainder.positive?
         unit_index += 1
       end
 
       words.join(' ').strip
     end
 
-    def sub_thousand_to_words(num)
-      num = num.to_i
-      return ONES[num] if num < 20
-      return "#{ONES[num / 100]} hundred" if num >= 100 && (num % 100).zero?
+    def sub_thousand_to_words(num, ones_array, tens_array)
+      return ones_array[num] if num < 20
+      return "#{ones_array[num / 100]} #{ones_array == ONES_HI ? 'सौ' : 'hundred'}" if num >= 100 && (num % 100).zero?
 
-      if num < 100
-        "#{TENS[num / 10]} #{ONES[num % 10]}".strip
-      else
-        "#{ONES[num / 100]} hundred and #{sub_thousand_to_words(num % 100)}"
+      words = []
+      if num >= 100
+        words << "#{ones_array[num / 100]} #{ones_array == ONES_HI ? 'सौ' : 'hundred'}"
+        num %= 100
       end
+
+      if num >= 20
+        words << tens_array[num / 10]
+        num %= 10
+      end
+
+      words << ones_array[num] if num.positive?
+      words.join(' ').strip
     end
   end
 end
