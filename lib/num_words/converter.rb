@@ -37,20 +37,29 @@ module NumWords
   }.freeze
 
   class << self
-    # Convert number to words
+    # Convert number to words (supports decimals)
     # Default language: :en
     def to_words(number, country: :us, language: :en, include_and: true)
-      val = number.to_i.abs
-      return language == :hi ? HINDI_NUMBERS_1_TO_99[0] : 'zero' if val.zero?
+      return language == :hi ? HINDI_NUMBERS_1_TO_99[0] : 'zero' if number.to_f.zero?
 
-      if country == :in
-        return language == :hi ? to_words_indian(number) : to_words_indian(number, language: :en)
-      end
+      integer_part, decimal_part = number.to_s.split('.')
+      integer_words = if country == :in
+                        language == :hi ? to_words_indian(integer_part.to_i) : to_words_indian(integer_part.to_i, language: :en)
+                      else
+                        exp_hash = COUNTRY_EXPONENTS[country] || AM_EXPONENTS
+                        ones_array = language == :hi ? HINDI_NUMBERS_1_TO_99 : ONES_EN
+                        tens_array = language == :hi ? HINDI_NUMBERS_1_TO_99 : TENS_EN
+                        to_words_generic(integer_part.to_i, exp_hash, include_and, ones_array, tens_array)
+                      end
 
-      exp_hash = COUNTRY_EXPONENTS[country] || AM_EXPONENTS
-      ones_array = language == :hi ? HINDI_NUMBERS_1_TO_99 : ONES_EN
-      tens_array = language == :hi ? HINDI_NUMBERS_1_TO_99 : TENS_EN
-      to_words_generic(val, exp_hash, include_and, ones_array, tens_array)
+      return integer_words if decimal_part.nil? || decimal_part.to_i.zero?
+
+      decimal_words = decimal_part.chars.map do |d|
+        language == :hi ? HINDI_NUMBERS_1_TO_99[d.to_i] : ONES_EN[d.to_i]
+      end.join(' ')
+
+      connector = language == :hi ? 'अंक' : 'point'
+      "#{integer_words} #{connector} #{decimal_words}"
     end
 
     # Indian system (supports English & Hindi)
